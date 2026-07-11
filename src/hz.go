@@ -47,6 +47,9 @@ func pack(input string,output string) {
       count = 0
     }
   }
+  if count >= 5 {
+        
+  }
   file.Write(data)
   
   
