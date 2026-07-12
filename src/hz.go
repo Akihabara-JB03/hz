@@ -83,7 +83,7 @@ func unpack(input string, output string) {
 			var count int
 			var readLen int
 			// カッコの中の数字（例: 300）と、その文字数（readLen）を同時に取得
-			_, err := fmt.Sscanf(s[i+1:], "{%d}%n", &count, &readLen)
+			_, err := fmt.Sscanf(s[i+1:], "{%d}%n", &count)
 
 			if err == nil {
 				// 読み取れた回数分、その文字をファイルに書き出す
