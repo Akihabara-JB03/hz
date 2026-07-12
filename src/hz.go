@@ -1,8 +1,9 @@
 package main
 import (
-  "fmt"
-  "os"
-  "io"
+	"fmt"
+	"os"
+	"io"
+	"strings"
 )
 func tukaikata() {
       fmt.Println("使い方をしれよ！！")
@@ -75,33 +76,42 @@ func unpack(input string, output string) {
 
 	s := string(data)
 
-	for i := 0; i < len(s); i++ {
-		// もし次の文字が '{' だったら、カッコの中の数字を読み取る
-		if i+1 < len(s) && s[i+1] == '{' {
-			currentChr := s[i] // 繰り返したい文字（例: 'A'）
-
-			var count int
-			// カッコの中の数字（例: 300）と、その文字数（readLen）を同時に取得
-			_, err := fmt.Sscanf(s[i+1:], "{%d}", &count)
-
-			if err == nil {
-				// 読み取れた回数分、その文字をファイルに書き出す
-				for j := 0; j < count; j++ {
-					fmt.Fprintf(file, "%c", currentChr)
+	// 【ここから大改造！】
+	// カッコ（{）が文字列の中に含まれている限り、何度も繰り返し解凍するループ
+	for strings.Contains(s, "{") {
+		var nextStr string // 今回の周回で解凍した文字を溜める変数
+		
+		for i := 0; i < len(s); i++ {
+			// もし「文字 + {」を見つけたら、一番内側のカッコを解凍する
+			if i+1 < len(s) && s[i+1] == '{' {
+				currentChr := s[i]
+				var count int
+				
+				// カッコの中の数字を読み取る
+				_, err := fmt.Sscanf(s[i+1:], "{%d}", &count)
+				
+				if err == nil {
+					// 読み取れた数だけ、文字を組み立てる
+					for j := 0; j < count; j++ {
+						nextStr += string(currentChr)
+					}
+					// カッコの分（{36}など）だけ進める
+					i += len(fmt.Sprint(count)) + 1
+				} else {
+					nextStr += string(s[i])
 				}
-				// カッコの分（ {300} など）だけインデックスをスキップ
-				i += len(fmt.Sprint(count)) + 2
 			} else {
-				// 万が一読み取りに失敗したらそのまま1文字として書き出す
-				fmt.Fprintf(file, "%c", s[i])
+				nextStr += string(s[i])
 			}
-		} else {
-			// 普通の文字はそのまま1文字書き出す
-			fmt.Fprintf(file, "%c", s[i])
 		}
+		s = nextStr // 解凍途中の文字列を s に上書きして、もう一周チェックする！
 	}
+
+	// 最後に、完全に解凍し終わった s をファイルに書き出す
+	fmt.Fprint(file, s)
 	fmt.Println("展開が完了したなり！")
 }
+
 func main() {
   if len(os.Args) < 4 {
     tukaikata()
