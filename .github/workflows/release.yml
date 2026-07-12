@@ -19,11 +19,11 @@ jobs:
 
     - name: Linux用にビルド
       working-directory: ./src   # 👈 これでActionsが自動的にsrcフォルダに入ってくれます！
-      run: go build -o ../hz_linux main.go
+      run: go build -o ../hz_linux .
 
     - name: Windows用にクロスビルド
       working-directory: ./src   # 👈 ここもsrcフォルダの中で実行させます！
-      run: GOOS=windows GOARCH=amd64 go build -o ../hz_windows.exe main.go
+      run: GOOS=windows GOARCH=amd64 go build -o ../hz_windows.exe .
 
     - name: ビルドした成果物をGitHubに保存
       uses: actions/upload-artifact@v4
