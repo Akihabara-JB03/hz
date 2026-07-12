@@ -62,7 +62,7 @@ func unpack(input string, output string) {
 
 	inpfile, err := os.Open(input)
 	if err != nil {
-		fmt.Printf("圧縮ファイル確認準備エラーなり！！ エラー内容:%s\n", err)
+		fmt.Printf("展開ファイル確認準備エラーなり！！ エラー内容:%s\n", err)
 		return
 	}
 	defer inpfile.Close()
@@ -83,7 +83,7 @@ func unpack(input string, output string) {
 			var count int
 			var readLen int
 			// カッコの中の数字（例: 300）と、その文字数（readLen）を同時に取得
-			_, err := fmt.Sscanf(s[i+1:], "{%d}%n", &count)
+			_, err := fmt.Sscanf(s[i+1:], "{%d}", &count)
 
 			if err == nil {
 				// 読み取れた回数分、その文字をファイルに書き出す
@@ -91,7 +91,7 @@ func unpack(input string, output string) {
 					fmt.Fprintf(file, "%c", currentChr)
 				}
 				// カッコの分（ {300} など）だけインデックスをスキップ
-				i += readLen
+				i += len(fmt.Sprint(count)) + 2
 			} else {
 				// 万が一読み取りに失敗したらそのまま1文字として書き出す
 				fmt.Fprintf(file, "%c", s[i])
