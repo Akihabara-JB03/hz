@@ -81,7 +81,6 @@ func unpack(input string, output string) {
 			currentChr := s[i] // 繰り返したい文字（例: 'A'）
 
 			var count int
-			var readLen int
 			// カッコの中の数字（例: 300）と、その文字数（readLen）を同時に取得
 			_, err := fmt.Sscanf(s[i+1:], "{%d}", &count)
 
