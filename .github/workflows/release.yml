@@ -2,7 +2,7 @@ name: Build hz
 
 on:
   push:
-    branches: [ "main" ] # mainブランチにプッシュされたら自動で動く
+    branches: [ "main" ]
 
 jobs:
   build:
@@ -15,13 +15,15 @@ jobs:
     - name: Go言語の準備
       uses: actions/setup-go@v5
       with:
-        go-version: '1.26.2' # あなたのパソコンのGoのバージョンに合わせてね
+        go-version: '1.26.2'
 
     - name: Linux用にビルド
-      run: go build -o hz_linux main.go
+      working-directory: ./src   # 👈 これでActionsが自動的にsrcフォルダに入ってくれます！
+      run: go build -o ../hz_linux main.go
 
     - name: Windows用にクロスビルド
-      run: GOOS=windows GOARCH=amd64 go build -o hz_windows.exe main.go
+      working-directory: ./src   # 👈 ここもsrcフォルダの中で実行させます！
+      run: GOOS=windows GOARCH=amd64 go build -o ../hz_windows.exe main.go
 
     - name: ビルドした成果物をGitHubに保存
       uses: actions/upload-artifact@v4
