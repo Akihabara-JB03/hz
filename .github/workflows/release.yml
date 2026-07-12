@@ -15,7 +15,7 @@ jobs:
     - name: Go言語の準備
       uses: actions/setup-go@v5
       with:
-        go-version: '1.26.2'
+        go-version: '1.22'
 
     - name: Linux用にビルド
       working-directory: ./src   # 👈 これでActionsが自動的にsrcフォルダに入ってくれます！
