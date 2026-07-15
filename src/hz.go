@@ -53,6 +53,13 @@ func pack(input string,output string) {
   }
    fmt.Println("圧縮完了なり！！")
 }
+// 展開用の一時データを保持するスタックの構造体
+type unpackTask struct {
+	char  rune            // 繰り返したい文字
+	count int             // 繰り返す回数
+	buf   strings.Builder // カッコの中に溜まった文字列
+}
+
 func unpack(input string, output string) {
 	file, err := os.Create(output)
 	if err != nil {
@@ -74,41 +81,102 @@ func unpack(input string, output string) {
 		return
 	}
 
-	s := string(data)
+	// Goの文字（UTF-8）を安全にパースするため rune 配列に変換
+	s := []rune(string(data))
 
-	// 【ここから大改造！】
-	// カッコ（{）が文字列の中に含まれている限り、何度も繰り返し解凍するループ
-	for strings.Contains(s, "{") {
-		var nextStr string // 今回の周回で解凍した文字を溜める変数
-		
-		for i := 0; i < len(s); i++ {
-			// もし「文字 + {」を見つけたら、一番内側のカッコを解凍する
-			if i+1 < len(s) && s[i+1] == '{' {
-				currentChr := s[i]
-				var count int
-				
-				// カッコの中の数字を読み取る
-				_, err := fmt.Sscanf(s[i+1:], "{%d}", &count)
-				
-				if err == nil {
-					// 読み取れた数だけ、文字を組み立てる
-					for j := 0; j < count; j++ {
-						nextStr += string(currentChr)
-					}
-					// カッコの分（{36}など）だけ進める
-					i += len(fmt.Sprint(count)) + 1
-				} else {
-					nextStr += string(s[i])
+	// 最外層の文字列をビルドするメインバッファ
+	var rootBuf strings.Builder
+	// カッコの階層を管理するスタック
+	var stack []*unpackTask
+
+	for i := 0; i < len(s); i++ {
+		// カッコの開始「{」を見つけた場合
+		if s[i] == '{' {
+			// 直前の文字が「繰り返す対象の文字」になる
+			// スタックが空なら rootBuf から、スタックがあるなら現在のタスクのバッファから1文字剥ぎ取る
+			var targetChar rune
+			if len(stack) == 0 {
+				strSoFar := rootBuf.String()
+				if len(strSoFar) > 0 {
+					runesSoFar := []rune(strSoFar)
+					targetChar = runesSoFar[len(runesSoFar)-1]
+					// 剥ぎ取った分、削る
+					rootBuf.Reset()
+					rootBuf.WriteString(string(runesSoFar[:len(runesSoFar)-1]))
 				}
 			} else {
-				nextStr += string(s[i])
+				currentTask := stack[len(stack)-1]
+				strSoFar := currentTask.buf.String()
+				if len(strSoFar) > 0 {
+					runesSoFar := []rune(strSoFar)
+					targetChar = runesSoFar[len(runesSoFar)-1]
+					currentTask.buf.Reset()
+					currentTask.buf.WriteString(string(runesSoFar[:len(runesSoFar)-1]))
+				}
 			}
+
+			// カッコの中の数字（回数）をパースする
+			var count int
+			numLen := 0
+			// 「{」の次の文字から数字が続く限り読み進める
+			for j := i + 1; j < len(s); j++ {
+				if s[j] >= '0' && s[j] <= '9' {
+					count = count*10 + int(s[j]-'0')
+					numLen++
+				} else {
+					break
+				}
+			}
+
+			// 新しい階層（タスク）を作成してスタックに積む（Push）
+			newTask := &unpackTask{
+				char:  targetChar,
+				count: count,
+			}
+			stack = append(stack, newTask)
+
+			// 読み進めた数字の分だけインデックスを進める
+			i += numLen
+			continue
 		}
-		s = nextStr // 解凍途中の文字列を s に上書きして、もう一周チェックする！
+
+		// カッコの閉じ「}」を見つけた場合
+		if s[i] == '}' {
+			if len(stack) > 0 {
+				// 現在の階層をポップ（Pop）
+				finishedTask := stack[len(stack)-1]
+				stack = stack[:len(stack)-1]
+
+				// カッコ内の文字列（中身）を展開する
+				var expanded strings.Builder
+				content := finishedTask.buf.String()
+
+				// 「指定文字」を指定回数分ループし、その中にカッコ内の中身を挟み込む
+				for k := 0; k < finishedTask.count; k++ {
+					expanded.WriteRune(finishedTask.char)
+					expanded.WriteString(content)
+				}
+
+				// 展開した結果を、1つ上の階層のバッファ（無ければrootBuf）に流し込む
+				if len(stack) == 0 {
+					rootBuf.WriteString(expanded.String())
+				} else {
+					stack[len(stack)-1].buf.WriteString(expanded.String())
+				}
+			}
+			continue
+		}
+
+		// 通常の文字は、現在の階層のバッファ（無ければrootBuf）にそのまま書き込む
+		if len(stack) == 0 {
+			rootBuf.WriteRune(s[i])
+		} else {
+			stack[len(stack)-1].buf.WriteRune(s[i])
+		}
 	}
 
-	// 最後に、完全に解凍し終わった s をファイルに書き出す
-	fmt.Fprint(file, s)
+	// 最後に、完全に解凍し終わった文字列をファイルに書き出す
+	fmt.Fprint(file, rootBuf.String())
 	fmt.Println("展開が完了したなり！")
 }
 
